@@ -6,12 +6,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124"
-          curl -sL -A "$UA" https://www.marluvas.com.br/ -o home.html; echo "home $(wc -c < home.html)"
-          O=$(grep -oE '(href|src|data-src)="[^"]+"' home.html | grep -iE 'produt|calcad|botin|\.(jpg|png|webp)|busca|search|api' | sort -u | head -60 | tr '\n' ' ')
-          echo "::notice title=home::$O"
-          for u in "https://www.marluvas.com.br/busca?q=35B19-C-PAD" "https://www.marluvas.com.br/pt-br/busca?termo=35B19" "https://www.marluvas.com.br/?s=35B19-C-PAD" "https://www.marluvas.com.br/produtos?search=35B19"; do
-            c=$(curl -sL -A "$UA" -o p.html -w "%{http_code}" "$u"); n=$(grep -o '35B19' p.html | wc -l)
-            echo "::notice title=try::$u -> $c n=$n $(grep -oE '(href|src)="[^"]*(35B19|701518)[^"]*"' p.html | sort -u | head -8 | tr '\n' ' ')"
-          done
-          grep -oE '<script[^>]+src="[^"]+"' home.html | head -10 | tr '\n' ' ' | sed 's/^/::notice title=scripts::/'
+          python3 - <<'PY'
+          import json,urllib.request
+          UA={'User-Agent':'Mozilla/5.0'}
+          allp=[]
+          for pg in range(1,20):
+              d=json.load(urllib.request.urlopen(urllib.request.Request(f'https://www.marluvas.com.br/products.json?limit=250&page={pg}',headers=UA),timeout=60))['products']
+              allp+=d
+              if len(d)<250: break
+          out=[f'total {len(allp)}']
+          p=allp[0]; out.append('chaves '+str(list(p.keys())))
+          out.append('variante '+json.dumps({k:p['variants'][0].get(k) for k in ('sku','title','barcode','option1','option2')},ensure_ascii=False))
+          for p in allp[:12]: out.append(f"{p['title']} | handle={p['handle']} | skus={[v.get('sku') for v in p['variants']][:3]} | imgs={len(p['images'])} | {p['images'][0]['src'][:90] if p['images'] else ''}")
+          import re
+          hit=[p['title'] for p in allp if '35B19' in p['title'] or any('701518' in str(v.get('sku')) for v in p['variants'])]
+          out.append('35B19/701518: '+str(hit[:5]))
+          s='\n'.join(out)
+          for i in range(0,len(s),3500): print('::notice title=s'+str(i//3500)+'::'+s[i:i+3500].replace('%','%25').replace('\n','%0A'))
+          PY
