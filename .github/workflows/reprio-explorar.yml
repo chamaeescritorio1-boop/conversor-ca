@@ -24,28 +24,33 @@ jobs:
               if isinstance(o,list): return [shape(o[0],d+1)] if o else []
               return type(o).__name__
           t=get('api-tabelas-preco')
-          print('TABELAS:'); [print(' ',x.get('id'),'|',x.get('codigo_erp'),'|',x.get('nome')) for x in (t.get('data') or [])] if 'data' in t else print(t)
-          p=get('api-produtos?limit=200')
-          d=p.get('data') or []
-          print('PRODUTOS total:',(p.get('pagination') or {}).get('total'))
-          print('ESTRUTURA PRODUTO:',json.dumps(shape(d[0]) if d else p)[:3000])
-          for x in d[:6]: print('  codigo=',x.get('codigo'),'| codigo_erp=',x.get('codigo_erp'),'|',str(x.get('descricao'))[:40])
-          print('PEDIDO resp:',str(get('api-pedidos/2026-000462'))[:300])
-          print('PEDIDOS lista:',str(get('api-pedidos?limit=1&resumido=1'))[:300])
+          d=t.get('data') if isinstance(t,dict) else t
+          print('TABELAS:'); [print(' ',x.get('id'),'|',x.get('codigo_erp'),'|',x.get('nome'),'|',x.get('representada_id')) for x in (d or [])] if d else print(str(t)[:300])
+          ped=get('api-pedidos/2026-000462'); dd=ped.get('data') or {}
+          if not dd: print('PEDIDO resp:',str(ped)[:300])
+          print('PEDIDO campos:',[k for k in dd.keys()])
+          for k,v in dd.items():
+              if k.endswith('_id') or k in ('status','origem_pedido','data_pedido','numero_pedido'): print(' ',k,'=',v)
+              elif isinstance(v,dict): print(' ',k,'=',{kk:vv for kk,vv in v.items() if kk in ('id','codigo_erp','nome','razao_social','descricao','codigo')} if k!='cliente' else '<cliente>')
+          its=dd.get('itens') or []
+          print('ITENS:',len(its))
+          for it in its[:4]:
+              print('  ',json.dumps({k:(v if not any(w in k for w in ('preco','valor','desconto','total')) else '<oc>') for k,v in it.items() if not isinstance(v,dict)},ensure_ascii=False,default=str)[:700])
+              for k,v in it.items():
+                  if isinstance(v,dict): print('     ',k,'=',{kk:vv for kk,vv in v.items() if kk in ('id','codigo','descricao')})
           import collections,re
           allp=[];pg=1
           while True:
-              r=get(f'api-produtos?limit=200&page={pg}'); dd=r.get('data') or []; allp+=dd
-              if len(dd)<200 or pg>60: break
+              r=get(f'api-produtos?limit=200&page={pg}'); dd2=r.get('data') or []; allp+=dd2
+              if len(dd2)<200 or pg>60: break
               pg+=1
-          rep=collections.Counter(x.get('representada_id') for x in allp)
-          print('REPRESENTADAS (id: qtd produtos):',dict(rep))
-          m=[x for x in allp if re.match(r'^70\d{4}',str(x.get('codigo','')))]
-          print('MARLUVAS produtos:',len(m),'representada:',collections.Counter(x.get('representada_id') for x in m))
-          base=[x['codigo'] for x in m if '-' not in x['codigo']]; var=[x['codigo'] for x in m if '-' in x['codigo']]
-          print('bases',len(base),'variacoes',len(var),'exemplos var 701402:',[c for c in var if c.startswith('701402-')])
-          print('usa_multiplo_por_variacao',collections.Counter(x.get('usa_multiplo_por_variacao') for x in m),'tipo_produto',collections.Counter(x.get('tipo_produto') for x in m))
-          print('CLIENTE teste:',str({k:v for k,v in ((get('api-clientes?cnpj=30557285000127').get('data') or [{}])[0]).items() if k in ('id','codigo_erp','representante_id','status')}))
+          M='35d0632c-d694-485e-bf78-4be2eca6a4bc'
+          var=collections.defaultdict(list)
+          for x in allp:
+              c=str(x.get('codigo',''))
+              if x.get('representada_id')==M and '-' in c: b,s=c.split('-',1); var[b].append(s)
+          print('VARMAP bases:',len(var))
+          print('VARMAP:'+';'.join(b+':'+','.join(v) for b,v in sorted(var.items())))
           s='\n'.join(OUT)
           for i in range(0,len(s),3500): builtins.print('::notice title=reprio'+str(i//3500)+'::'+s[i:i+3500].replace('%','%25').replace('\r','').replace('\n','%0A'))
           PY
