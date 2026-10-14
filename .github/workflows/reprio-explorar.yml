@@ -10,7 +10,9 @@ jobs:
           KEY: ${{ secrets.REPRIO_KEY }}
         run: |
           python3 - <<'PY'
-          import json,os,urllib.request
+          import json,os,urllib.request,builtins
+          OUT=[]
+          def print(*a,**k): OUT.append(' '.join(str(x) for x in a))
           B='https://yahrccahjmybgolvhbkd.supabase.co/functions/v1/'
           def get(p):
               r=urllib.request.Request(B+p,headers={'Authorization':'Bearer '+os.environ['KEY']})
@@ -36,8 +38,10 @@ jobs:
               if isinstance(v,dict): print(k,':',{kk:v.get(kk) for kk in ('id','codigo_erp','nome','descricao')})
           its=dd.get('itens') or []
           if its:
-              it=dict(its[0]); print('ITEM exemplo (sem cliente):',json.dumps(it,ensure_ascii=False,default=str)[:3000])
+              it={k:(v if not any(w in k for w in ('preco','valor','desconto','total')) else '<oculto>') for k,v in dict(its[0]).items()}; print('ITEM exemplo (sem cliente):',json.dumps(it,ensure_ascii=False,default=str)[:3000])
           print('CAMPOS raiz pedido:',[k for k in dd.keys()])
           for k in ('condicao_pagamento_id','representada_id','tabela_preco_id','transportadora_id','representante_id'):
               print(k,'=',dd.get(k))
+          s='\n'.join(OUT)
+          for i in range(0,len(s),3500): builtins.print('::notice title=reprio'+str(i//3500)+'::'+s[i:i+3500].replace('%','%25').replace('\r','').replace('\n','%0A'))
           PY
