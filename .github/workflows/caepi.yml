@@ -1,0 +1,27 @@
+name: Base CAEPI (calçados)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 9 * * 1'
+permissions:
+  contents: write
+jobs:
+  caepi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar CAEPI
+        run: |
+          set -e
+          for u in "ftp://ftp.mtps.gov.br/portal/fiscalizacao/seguranca-e-saude-no-trabalho/caepi/tgg_export_caepi.zip" "http://www3.mte.gov.br/sistemas/caepi/tgg_export_caepi.zip"; do
+            curl -fsSL --retry 3 --max-time 600 -o caepi.zip "$u" && break || true
+          done
+          ls -la caepi.zip
+      - name: Filtrar calçados
+        run: python3 .github/scripts/caepi.py caepi.zip caepi.json && ls -la caepi.json
+      - name: Publicar
+        run: |
+          git config user.name "caepi-bot"; git config user.email "actions@users.noreply.github.com"
+          cp caepi.json teste/caepi.json
+          git add caepi.json teste/caepi.json
+          git diff --cached --quiet || (git commit -m "Base CAEPI calçados atualizada" && git pull --rebase -q && git push)
