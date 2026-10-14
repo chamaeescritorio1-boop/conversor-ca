@@ -1,0 +1,27 @@
+name: Baixar imagens dos produtos
+on:
+  push:
+    paths: ['img-list.txt']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  baixar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download
+        run: |
+          mkdir -p img
+          while read -r cod url; do
+            [ -z "$cod" ] && continue
+            [ -s "img/$cod.jpg" ] && continue
+            curl -sSfL --retry 2 -o "img/$cod.jpg" "$url" || rm -f "img/$cod.jpg"
+          done < img-list.txt
+          ls img | wc -l
+      - name: Commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add img
+          git diff --cached --quiet || (git commit -m "Imagens dos produtos" && git push)
