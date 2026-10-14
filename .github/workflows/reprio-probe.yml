@@ -1,0 +1,33 @@
+name: Reprio - sondar endpoints
+on:
+  workflow_dispatch:
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          KEY: ${{ secrets.REPRIO_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json,os,urllib.request,urllib.error
+          B='https://yahrccahjmybgolvhbkd.supabase.co/functions/v1/'
+          out=[]
+          def get(p):
+              r=urllib.request.Request(B+p,headers={'Authorization':'Bearer '+os.environ.get('KEY','')})
+              try:
+                  with urllib.request.urlopen(r,timeout=30) as f: return f.status,json.load(f)
+              except urllib.error.HTTPError as e: return e.code,e.read()[:200].decode('utf8','ignore')
+              except Exception as e: return 0,str(e)
+          for ep in ['api-condicoes-pagamento','api-condicoes','api-prazos','api-representantes','api-vendedores','api-transportadoras','api-produtos-variacoes','api-variacoes','api-produto-variacoes','api-grades']:
+              s,d=get(ep+'?limit=200')
+              if s==200:
+                  data=d.get('data') if isinstance(d,dict) else d
+                  if isinstance(data,list):
+                      out.append(f'{ep}: 200 n={len(data)} chaves={list(data[0].keys()) if data else []}')
+                      for x in data[:80]:
+                          out.append('  '+' | '.join(str(x.get(k)) for k in ('id','nome','codigo_erp','razao_social','representada_id','produto_id','codigo','valor','descricao') if k in x))
+                  else: out.append(f'{ep}: 200 {str(d)[:300]}')
+              else: out.append(f'{ep}: {s} {str(d)[:120]}')
+          s='\n'.join(out)
+          for i in range(0,len(s),3500): print('::notice title=p'+str(i//3500)+'::'+s[i:i+3500].replace('%','%25').replace('\n','%0A'))
+          PY
