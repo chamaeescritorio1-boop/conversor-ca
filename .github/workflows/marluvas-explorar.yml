@@ -1,0 +1,17 @@
+name: Marluvas - mapear site
+on:
+  workflow_dispatch:
+jobs:
+  x:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124"
+          curl -sL -A "$UA" https://www.marluvas.com.br/ -o home.html; echo "home $(wc -c < home.html)"
+          O=$(grep -oE '(href|src|data-src)="[^"]+"' home.html | grep -iE 'produt|calcad|botin|\.(jpg|png|webp)|busca|search|api' | sort -u | head -60 | tr '\n' ' ')
+          echo "::notice title=home::$O"
+          for u in "https://www.marluvas.com.br/busca?q=35B19-C-PAD" "https://www.marluvas.com.br/pt-br/busca?termo=35B19" "https://www.marluvas.com.br/?s=35B19-C-PAD" "https://www.marluvas.com.br/produtos?search=35B19"; do
+            c=$(curl -sL -A "$UA" -o p.html -w "%{http_code}" "$u"); n=$(grep -o '35B19' p.html | wc -l)
+            echo "::notice title=try::$u -> $c n=$n $(grep -oE '(href|src)="[^"]*(35B19|701518)[^"]*"' p.html | sort -u | head -8 | tr '\n' ' ')"
+          done
+          grep -oE '<script[^>]+src="[^"]+"' home.html | head -10 | tr '\n' ' ' | sed 's/^/::notice title=scripts::/'
