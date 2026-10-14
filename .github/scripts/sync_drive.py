@@ -29,5 +29,26 @@ while pastas:
                 im.thumbnail((500, 500)); bg = Image.new('RGB', (500, 500), 'white'); bg.paste(im, ((500-im.width)//2, (500-im.height)//2))
                 bg.save(dest, quality=82); imagens += 1
             except Exception as e: print('falha imagem', nome, e)
+# Para modelos sem imagem, extrai a foto da própria ficha técnica (maior imagem do PDF)
+import fitz
+extraidas = 0
+for cod, fid2 in fichas.items():
+    dest = f'img/{cod}.jpg'
+    if os.path.exists(dest): continue
+    try:
+        doc = fitz.open(stream=get(f'https://drive.google.com/uc?export=download&id={fid2}'), filetype='pdf')
+        best = None
+        for pg in doc:
+            for x in pg.get_images(full=True):
+                pix = fitz.Pixmap(doc, x[0])
+                if pix.n - pix.alpha >= 4: pix = fitz.Pixmap(fitz.csRGB, pix)
+                if pix.width < 150 or pix.height < 150: continue
+                if not best or pix.width * pix.height > best.width * best.height: best = pix
+        if not best: continue
+        im = Image.open(io.BytesIO(best.tobytes('png'))).convert('RGB')
+        im.thumbnail((500, 500)); bg = Image.new('RGB', (500, 500), 'white'); bg.paste(im, ((500-im.width)//2, (500-im.height)//2))
+        bg.save(dest, quality=82); extraidas += 1
+    except Exception as e: print('falha ficha', cod, e)
+print('imagens extraídas das fichas:', extraidas)
 json.dump(fichas, open('fichas.json', 'w'), separators=(',', ':'))
 print(f'fichas: {len(fichas)} | imagens: {imagens}')

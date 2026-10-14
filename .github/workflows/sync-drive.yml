@@ -1,7 +1,7 @@
 name: Sincronizar fichas e imagens do Drive
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 permissions:
   contents: write
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: pip install pillow
+      - run: pip install pillow pymupdf
       - run: python3 .github/scripts/sync_drive.py
       - run: |
           git config user.name "github-actions"; git config user.email "actions@github.com"
