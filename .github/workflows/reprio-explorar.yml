@@ -1,0 +1,43 @@
+name: Reprio - mapear estrutura da API
+on:
+  workflow_dispatch:
+jobs:
+  explorar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar API (somente estrutura, sem dados de clientes)
+        env:
+          KEY: ${{ secrets.REPRIO_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json,os,urllib.request
+          B='https://yahrccahjmybgolvhbkd.supabase.co/functions/v1/'
+          def get(p):
+              r=urllib.request.Request(B+p,headers={'Authorization':'Bearer '+os.environ['KEY']})
+              try:
+                  with urllib.request.urlopen(r,timeout=30) as f: return json.load(f)
+              except Exception as e: return {'erro':str(e)}
+          def shape(o,d=0):
+              if isinstance(o,dict): return {k:shape(v,d+1) for k,v in o.items()}
+              if isinstance(o,list): return [shape(o[0],d+1)] if o else []
+              return type(o).__name__
+          t=get('api-tabelas-preco')
+          print('TABELAS:'); [print(' ',x.get('id'),'|',x.get('codigo_erp'),'|',x.get('nome')) for x in (t.get('data') or [])] if 'data' in t else print(t)
+          p=get('api-produtos?limit=200')
+          d=p.get('data') or []
+          print('PRODUTOS total:',(p.get('pagination') or {}).get('total'))
+          print('ESTRUTURA PRODUTO:',json.dumps(shape(d[0]) if d else p)[:3000])
+          for x in d[:6]: print('  codigo=',x.get('codigo'),'| codigo_erp=',x.get('codigo_erp'),'|',str(x.get('descricao'))[:40])
+          ped=get('api-pedidos/2026-000462')
+          dd=ped.get('data') or {}
+          print('ESTRUTURA PEDIDO:',json.dumps(shape(dd))[:4000])
+          for k in ('condicao_pagamento','transportadora','representada','tabela_preco','representante'):
+              v=dd.get(k)
+              if isinstance(v,dict): print(k,':',{kk:v.get(kk) for kk in ('id','codigo_erp','nome','descricao')})
+          its=dd.get('itens') or []
+          if its:
+              it=dict(its[0]); print('ITEM exemplo (sem cliente):',json.dumps(it,ensure_ascii=False,default=str)[:3000])
+          print('CAMPOS raiz pedido:',[k for k in dd.keys()])
+          for k in ('condicao_pagamento_id','representada_id','tabela_preco_id','transportadora_id','representante_id'):
+              print(k,'=',dd.get(k))
+          PY
