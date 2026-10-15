@@ -1,0 +1,21 @@
+name: Fotos dos CAs concorrentes
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 10 * * 1'
+permissions:
+  contents: write
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+      - name: Buscar fotos
+        run: python3 .github/scripts/fotos_ca.py
+      - name: Publicar
+        run: |
+          git config user.name "caepi-bot"; git config user.email "actions@users.noreply.github.com"
+          cp caepi_fotos.json teste/caepi_fotos.json
+          git add caepi_fotos.json teste/caepi_fotos.json
+          git diff --cached --quiet || (git commit -m "Fotos dos CAs atualizadas" && git pull --rebase -q && git push)
