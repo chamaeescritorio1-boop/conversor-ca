@@ -11,11 +11,12 @@ jobs:
     timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
+      - run: pip install pillow
       - name: Buscar fotos
         run: python3 .github/scripts/fotos_ca.py
       - name: Publicar
         run: |
           git config user.name "caepi-bot"; git config user.email "actions@users.noreply.github.com"
           cp caepi_fotos.json teste/caepi_fotos.json
-          git add caepi_fotos.json teste/caepi_fotos.json
+          git add caepi_fotos.json teste/caepi_fotos.json img_ca
           git diff --cached --quiet || (git commit -m "Fotos dos CAs atualizadas" && git pull --rebase -q && git push)
