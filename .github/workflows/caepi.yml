@@ -23,5 +23,5 @@ jobs:
         run: |
           git config user.name "caepi-bot"; git config user.email "actions@users.noreply.github.com"
           cp caepi.json teste/caepi.json
-          git add caepi.json teste/caepi.json
+          git add caepi.json teste/caepi.json caepi_luvas.json
           git diff --cached --quiet || (git commit -m "Base CAEPI calçados atualizada" && git pull --rebase -q && git push)
