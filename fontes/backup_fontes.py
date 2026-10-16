@@ -9,7 +9,7 @@ def key(pw, salt): return PBKDF2HMAC(hashes.SHA256(), 32, salt, 300000).derive(p
 if sys.argv[1] == 'backup':
     src, out = sys.argv[2], sys.argv[3]
     pw = open(os.path.join(src, 'pw.txt')).read().strip()
-    skip = {'pwa', 'pwa_teste', 'conversor-ca-app.zip', 'chk.js', 't.js', 't2.js'}
+    skip = {'pwa', 'pwa_teste', 'medix', 'conversor-ca-app.zip', 'chk.js', 't.js', 't2.js'}
     bio = io.BytesIO()
     with tarfile.open(fileobj=bio, mode='w:gz') as tf:
         for root, dirs, files in os.walk(src):
