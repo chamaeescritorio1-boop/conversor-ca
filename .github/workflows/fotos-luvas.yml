@@ -1,0 +1,24 @@
+name: Fotos dos CAs de luvas concorrentes
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/fotos-luvas.yml']
+  schedule:
+    - cron: '23 */3 * * *'
+permissions:
+  contents: write
+concurrency: fotos-luvas
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pillow
+      - name: Buscar fotos
+        run: python3 .github/scripts/fotos_luvas.py
+      - name: Publicar
+        run: |
+          git config user.name "caepi-bot"; git config user.email "actions@users.noreply.github.com"
+          git add caepi_luvas_fotos.json img_ca
+          git diff --cached --quiet || (git commit -m "Fotos dos CAs de luvas" && git pull --rebase -q && git push)
